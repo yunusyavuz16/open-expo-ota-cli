@@ -1,0 +1,42 @@
+{
+  "name": "openexpoota-cli",
+  "version": "1.0.0",
+  "description": "Command-line tool for OpenExpoOTA - A self-hosted OTA update system for Expo",
+  "main": "dist/index.js",
+  "bin": {
+    "ota": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "start": "node dist/index.js",
+    "lint": "eslint . --ext .ts",
+    "test": "jest",
+    "prepare": "npm run build",
+    "test-connection": "ts-node src/scripts/test-connection.ts"
+  },
+  "keywords": [
+    "expo",
+    "ota",
+    "updates",
+    "cli",
+    "react-native"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.4.0",
+    "chalk": "^4.1.2",
+    "commander": "^11.0.0",
+    "dotenv": "^16.3.1",
+    "inquirer": "^8.2.5",
+    "open": "^8.4.2",
+    "ora": "^5.4.1"
+  },
+  "devDependencies": {
+    "@types/inquirer": "^9.0.3",
+    "@types/node": "^20.4.2",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.1.6"
+  }
+}
