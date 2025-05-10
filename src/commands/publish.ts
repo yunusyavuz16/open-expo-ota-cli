@@ -76,8 +76,8 @@ export default function publish(program: Command): void {
         if (options.platform) {
           const requestedPlatforms = options.platform.split(',');
           platforms = requestedPlatforms
-            .filter((p) => Object.values(Platform).includes(p as Platform))
-            .map((p) => p as Platform);
+            .filter((p: string) => Object.values(Platform).includes(p as Platform))
+            .map((p: string) => p as Platform);
 
           if (platforms.length === 0) {
             console.log(chalk.yellow(`Invalid platforms: ${options.platform}. Using default: ios,android`));

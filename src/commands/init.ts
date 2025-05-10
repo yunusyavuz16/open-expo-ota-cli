@@ -5,6 +5,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import apiClient from '../utils/api-client';
 import { getExpoConfig } from '../utils/bundle';
+import { getConfig } from '../utils/api-client';
 
 export default function init(program: Command): void {
   program
@@ -137,7 +138,7 @@ export default function init(program: Command): void {
           configPath,
           {
             slug: appSlug,
-            api: apiClient.getConfig().apiUrl,
+            api: getConfig().apiUrl,
           },
           { spaces: 2 }
         );

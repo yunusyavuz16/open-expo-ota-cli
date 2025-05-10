@@ -130,6 +130,12 @@ export default function promoteUpdate(program: Command): void {
 
         // Promote update
         console.log(chalk.blue(`Promoting update ID ${updateId} to ${channel} channel...`));
+
+        if (!updateId) {
+          console.log(chalk.red('No update ID specified.'));
+          return;
+        }
+
         const result = await apiClient.promoteUpdate(app.id, updateId, channel);
 
         console.log(chalk.green('Update promoted successfully!'));
