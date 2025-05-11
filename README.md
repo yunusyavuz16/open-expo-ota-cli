@@ -1,6 +1,14 @@
 # OpenExpoOTA CLI
 
-Command-line tool for OpenExpoOTA - A self-hosted OTA update system for Expo apps.
+Command-line tool for managing OTA updates with the OpenExpoOTA self-hosted platform.
+
+## Features
+
+- GitHub-based authentication
+- Create and manage apps
+- Publish OTA updates for Expo apps
+- List apps and updates
+- Specify release channels and runtime versions
 
 ## Installation
 
@@ -8,142 +16,141 @@ Command-line tool for OpenExpoOTA - A self-hosted OTA update system for Expo app
 npm install -g openexpoota-cli
 ```
 
-Or for development:
+Or use it directly with npx:
 
 ```bash
-git clone https://github.com/yourusername/openexpoota.git
-cd openexpoota/cli
-npm install
-npm link
+npx openexpoota-cli [command]
 ```
 
-## Usage
+## Setup
+
+1. Create a `.env` file in your project directory:
 
 ```bash
-ota [command] [options]
-```
-
-### Commands
-
-- `login`: Log in to the OpenExpoOTA server
-- `init`: Initialize OpenExpoOTA in your Expo project
-- `publish`: Publish an update to your OpenExpoOTA server
-- `list-apps`: List your apps on the OpenExpoOTA server
-- `list-updates`: List updates for an app
-- `promote`: Promote an update to a different release channel
-- `invite`: Invite a GitHub user to collaborate on an app
-- `config`: View or update configuration
-
-### Login
-
-```bash
-ota login [options]
-```
-
-Options:
-- `-u, --url <url>`: API URL to use (e.g. http://localhost:3000/api)
-
-This command starts a local server and opens your browser to authenticate with GitHub OAuth.
-
-### Init
-
-```bash
-ota init [options]
-```
-
-Options:
-- `-d, --dir <directory>`: Project directory (defaults to current directory)
-
-This command initializes your Expo project with OpenExpoOTA configuration. It lets you create a new app or select an existing one.
-
-### Publish
-
-```bash
-ota publish [options]
-```
-
-Options:
-- `-d, --dir <directory>`: Project directory (defaults to current directory)
-- `-c, --channel <channel>`: Release channel (production, staging, development)
-- `-v, --version <version>`: Version of the update (defaults to app.json version)
-- `-r, --runtime-version <runtimeVersion>`: Runtime version (defaults to app.json version)
-- `-p, --platform <platform>`: Platform(s) to target (comma-separated: ios,android,web)
-
-This command bundles your Expo project and publishes an update to your OpenExpoOTA server.
-
-### List Apps
-
-```bash
-ota list-apps
-```
-
-Lists all apps you have access to on the OpenExpoOTA server.
-
-### List Updates
-
-```bash
-ota list-updates [options]
-```
-
-Options:
-- `-d, --dir <directory>`: Project directory (defaults to current directory)
-- `-s, --slug <slug>`: App slug (overrides ota.config.json)
-
-Lists all updates for an app on the OpenExpoOTA server.
-
-### Promote Update
-
-```bash
-ota promote [options]
-```
-
-Options:
-- `-d, --dir <directory>`: Project directory (defaults to current directory)
-- `-s, --slug <slug>`: App slug (overrides ota.config.json)
-- `-u, --update-id <updateId>`: ID of the update to promote
-- `-c, --channel <channel>`: Target channel (production, staging, development)
-
-Promotes an existing update to a different release channel. For example, promote a development update to staging or production.
-
-### Invite User
-
-```bash
-ota invite [options]
-```
-
-Options:
-- `-d, --dir <directory>`: Project directory (defaults to current directory)
-- `-s, --slug <slug>`: App slug (overrides ota.config.json)
-- `-u, --username <username>`: GitHub username to invite
-- `-r, --role <role>`: User role (admin or developer)
-
-Invites a GitHub user to collaborate on an app with the specified role.
-
-## Configuration
-
-The CLI creates a configuration file in your home directory at `~/.openexpoota/config.json`. You can edit this file directly if needed.
-
-Additionally, when you initialize a project, it creates an `ota.config.json` file in your project directory with project-specific configuration.
-
-### Environment Variables
-
-The CLI also supports configuration via environment variables. You can create a `.env` file in your project:
-
-```bash
-# Copy the example environment file
 cp .env.example .env
-# Edit with your settings
 ```
 
-Available environment variables:
-- `API_URL`: URL of your OpenExpoOTA backend API
-- `AUTH_TOKEN`: Authentication token (set automatically after login)
-- `DEFAULT_CHANNEL`: Default release channel for updates
-- `DEFAULT_RUNTIME_VERSION`: Default runtime version
+2. Configure your environment variables:
 
-## Compatibility
+```
+API_URL=http://localhost:3000/api
+TOKEN_PATH=.openexpoota.json
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_OAUTH_REDIRECT=http://localhost:3000/api/auth/cli/callback
+DEFAULT_CHANNEL=development
+```
 
-The CLI is compatible with the OpenExpoOTA backend using either PostgreSQL directly or Supabase as the database provider.
+## Commands
+
+### Authentication
+
+Log in with GitHub:
+
+```bash
+openexpoota login
+```
+
+This will open a browser window for GitHub authentication.
+
+### App Management
+
+List your apps:
+
+```bash
+openexpoota list-apps
+```
+
+Create a new app:
+
+```bash
+openexpoota init [options]
+```
+
+Options:
+- `--name` - App name
+- `--slug` - App slug (unique identifier)
+- `--description` - App description
+
+### Publishing Updates
+
+Publish an update:
+
+```bash
+openexpoota publish [options]
+```
+
+Options:
+- `--app` - App slug or ID
+- `--channel` - Release channel (defaults to 'development')
+- `--version` - Update version
+- `--runtime-version` - Expo runtime version
+- `--path` - Path to the expo export directory (defaults to 'dist')
+
+### Listing Updates
+
+List updates for an app:
+
+```bash
+openexpoota list-updates --app [app-slug]
+```
+
+## Workflow Integration
+
+### GitHub Actions
+
+You can integrate OpenExpoOTA CLI into your CI/CD pipeline:
+
+```yaml
+# .github/workflows/publish-update.yml
+name: Publish OTA Update
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+      - name: Install dependencies
+        run: npm install
+      - name: Build Expo project
+        run: npx expo export:web
+      - name: Publish update
+        run: |
+          npm install -g openexpoota-cli
+          openexpoota publish --app my-app --channel production --version ${{ github.sha }} --runtime-version 1.0.0
+        env:
+          OPENEXPOOTA_TOKEN: ${{ secrets.OPENEXPOOTA_TOKEN }}
+```
+
+## Development
+
+To develop the CLI:
+
+```bash
+# Install dependencies
+npm install
+
+# Build
+npm run build
+
+# Link for local testing
+npm link
+
+# Run tests
+npm test
+```
+
+## Connection with Backend
+
+This CLI connects to a OpenExpoOTA backend. Make sure you have set up and configured the backend according to [the backend documentation](../backend/README.md).
+
+The backend uses an Entity Framework-like approach with Supabase for data storage, making it easy to manage and query your OTA updates.
 
 ## License
 

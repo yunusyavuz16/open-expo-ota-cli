@@ -101,7 +101,7 @@ class ApiClient {
   }
 
   // Login with GitHub
-  async getGitHubLoginUrl(): Promise<string> {
+  getGitHubLoginUrl(): string {
     return `${this.config.apiUrl}/auth/github`;
   }
 
@@ -116,15 +116,28 @@ class ApiClient {
     try {
       await this.client.get('/auth/me');
       return true;
-    } catch (error) {
+    } catch (error: any) {
+      // If status is 401 or 403, token is invalid or expired
+      // Any other error might be a connection issue
+      const status = error.response?.status;
+      if (status !== 401 && status !== 403) {
+        console.error('Error checking token validity:', error.message || String(error));
+      }
       return false;
     }
   }
 
   // Get authenticated user
   async getUser(): Promise<any> {
-    const response = await this.client.get('/auth/me');
-    return response.data;
+    try {
+      const response = await this.client.get('/auth/me');
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        throw new Error('Authentication failed. Please log in again.');
+      }
+      throw error;
+    }
   }
 
   // List apps

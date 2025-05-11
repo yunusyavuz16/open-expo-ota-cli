@@ -33,6 +33,8 @@ export default function login(program: Command): void {
 
         // Promise to wait for the callback
         const waitForCallback = new Promise<string>((resolve, reject) => {
+          let timeoutId: NodeJS.Timeout;
+
           server.on('request', (req, res) => {
             const parsedUrl = url.parse(req.url || '', true);
             const { token } = parsedUrl.query;
@@ -42,14 +44,23 @@ export default function login(program: Command): void {
               res.writeHead(200, { 'Content-Type': 'text/html' });
               res.end(`
                 <html>
-                <head><title>Login Successful</title></head>
+                <head>
+                  <title>Login Successful</title>
+                  <style>
+                    body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; text-align: center; }
+                    h1 { color: #2c7be5; }
+                  </style>
+                </head>
                 <body>
                   <h1>Login Successful!</h1>
-                  <p>You can now close this window and return to the CLI.</p>
+                  <p>Authentication complete. You can now close this window and return to the CLI.</p>
                   <script>window.close();</script>
                 </body>
                 </html>
               `);
+
+              // Clear the timeout
+              if (timeoutId) clearTimeout(timeoutId);
 
               // Resolve the promise with the token
               resolve(token as string);
@@ -61,17 +72,28 @@ export default function login(program: Command): void {
               res.writeHead(400, { 'Content-Type': 'text/html' });
               res.end(`
                 <html>
-                <head><title>Login Failed</title></head>
+                <head>
+                  <title>Login Failed</title>
+                  <style>
+                    body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; text-align: center; }
+                    h1 { color: #e53e3e; }
+                  </style>
+                </head>
                 <body>
                   <h1>Login Failed</h1>
                   <p>No token received. Please try again.</p>
+                  <button onclick="window.close()">Close Window</button>
                 </body>
                 </html>
               `);
-
-              reject(new Error('No token received'));
             }
           });
+
+          // Set a timeout in case authorization takes too long
+          timeoutId = setTimeout(() => {
+            server.close();
+            reject(new Error('Login timed out after 5 minutes. Please try again.'));
+          }, 5 * 60 * 1000); // 5 minutes timeout
         });
 
         // Start server
@@ -79,23 +101,31 @@ export default function login(program: Command): void {
           console.log(chalk.blue('Starting GitHub OAuth login...'));
           console.log(chalk.gray('Opening browser for authentication...'));
 
-          // Open browser for GitHub OAuth
-          const loginUrl = `${apiClient.getGitHubLoginUrl()}?redirect=http://localhost:${PORT}`;
+          // Open browser for GitHub OAuth with redirect parameter
+          const redirectUrl = encodeURIComponent(`http://localhost:${PORT}`);
+          const loginUrl = `${apiClient.getGitHubLoginUrl()}?redirect=${redirectUrl}`;
           open(loginUrl);
+
+          console.log(chalk.gray('Waiting for authentication to complete...'));
+          console.log(chalk.gray('If your browser does not open automatically, please visit:'));
+          console.log(chalk.cyan(loginUrl));
         });
 
         // Wait for callback
         try {
           const token = await waitForCallback;
           apiClient.setToken(token);
+
+          // Verify the token by fetching user info
           const user = await apiClient.getUser();
-          console.log(chalk.green(`Successfully logged in as ${user.username}`));
-        } catch (error) {
-          console.error(chalk.red('Login failed:'), error);
+          console.log(chalk.green(`\nSuccessfully logged in as ${user.username}`));
+          console.log(chalk.gray(`Your token has been saved and will be used for future commands.`));
+        } catch (error: any) {
+          console.error(chalk.red('\nLogin failed:'), error.message || String(error));
           server.close();
         }
-      } catch (error) {
-        console.error(chalk.red('Error during login:'), error);
+      } catch (error: any) {
+        console.error(chalk.red('Error during login:'), error.message || String(error));
         process.exit(1);
       }
     });
