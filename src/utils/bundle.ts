@@ -77,7 +77,7 @@ export const createBundle = async (
     // Run expo export to get the bundle and assets
     console.log('Running expo export...');
     try {
-      const result = await execAsync('npx expo export --dump-sourcemap --dev false --clear', {
+      const result = await execAsync('npx expo export', {
         cwd: projectRoot // This is the root of the Expo project
       });
       console.log('Export successful:', result.stdout);

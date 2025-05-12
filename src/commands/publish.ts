@@ -59,7 +59,7 @@ export default function publish(program: Command): void {
 
         // Determine version and runtime version
         const version = options.version || expoConfig.version || '1.0.0';
-        const runtimeVersion = options.runtimeVersion || expoConfig.runtimeVersion || expoConfig.version || '1.0.0';
+        const runtimeVersion = options.runtimeVersion || expoConfig.runtimeVersion || expoConfig.version || apiClient.getDefaultRuntimeVersion();
 
         // Determine channel
         let channel: ReleaseChannel = ReleaseChannel.DEVELOPMENT;
@@ -69,6 +69,8 @@ export default function publish(program: Command): void {
           } else {
             console.log(chalk.yellow(`Invalid channel: ${options.channel}. Using default: ${channel}`));
           }
+        } else {
+          channel = apiClient.getDefaultChannel() as ReleaseChannel;
         }
 
         // Determine platforms

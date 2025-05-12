@@ -6,12 +6,15 @@ import path from 'path';
 import apiClient from '../utils/api-client';
 import { getExpoConfig } from '../utils/bundle';
 import { getConfig } from '../utils/api-client';
+import { ReleaseChannel } from '../types';
 
 export default function init(program: Command): void {
   program
     .command('init')
     .description('Initialize OpenExpoOTA in your Expo project')
     .option('-d, --dir <directory>', 'Project directory (defaults to current directory)')
+    .option('-c, --default-channel <channel>', 'Default release channel (production, staging, development)')
+    .option('-r, --default-runtime-version <version>', 'Default runtime version')
     .action(async (options) => {
       try {
         // Verify user is logged in
@@ -31,8 +34,9 @@ export default function init(program: Command): void {
         }
 
         // Try to detect Expo project
+        let expoConfig;
         try {
-          const expoConfig = await getExpoConfig(projectDir);
+          expoConfig = await getExpoConfig(projectDir);
           console.log(chalk.green('Expo project detected!'));
           console.log(chalk.gray(`Name: ${expoConfig.name}`));
           console.log(chalk.gray(`Version: ${expoConfig.version}`));
@@ -51,6 +55,26 @@ export default function init(program: Command): void {
             console.log(chalk.gray('Initialization cancelled.'));
             return;
           }
+        }
+
+        // Set default channel if provided
+        if (options.defaultChannel) {
+          if (Object.values(ReleaseChannel).includes(options.defaultChannel as ReleaseChannel)) {
+            apiClient.setDefaultChannel(options.defaultChannel);
+            console.log(chalk.green(`Default channel set to ${options.defaultChannel}`));
+          } else {
+            console.log(chalk.yellow(`Invalid channel: ${options.defaultChannel}. Using default: ${apiClient.getDefaultChannel()}`));
+          }
+        }
+
+        // Set default runtime version if provided
+        if (options.defaultRuntimeVersion) {
+          apiClient.setDefaultRuntimeVersion(options.defaultRuntimeVersion);
+          console.log(chalk.green(`Default runtime version set to ${options.defaultRuntimeVersion}`));
+        } else if (expoConfig?.version) {
+          // Use Expo version as default runtime version if available
+          apiClient.setDefaultRuntimeVersion(expoConfig.version);
+          console.log(chalk.green(`Default runtime version set to ${expoConfig.version} (from Expo config)`));
         }
 
         // Check for existing app or create new one

@@ -11,6 +11,8 @@ export default function login(program: Command): void {
     .command('login')
     .description('Log in to the OpenExpoOTA server')
     .option('-u, --url <url>', 'API URL to use (e.g. http://localhost:3000/api)')
+    .option('--github-client-id <id>', 'GitHub OAuth client ID')
+    .option('--github-redirect <url>', 'GitHub OAuth redirect URL')
     .action(async (options) => {
       try {
         // If API URL is provided, set it
@@ -19,11 +21,40 @@ export default function login(program: Command): void {
           console.log(chalk.green(`API URL set to ${options.url}`));
         }
 
+        // If GitHub OAuth config is provided, set it
+        if (options.githubClientId || options.githubRedirect) {
+          const clientId = options.githubClientId || apiClient.getGitHubClientId();
+          const redirectUrl = options.githubRedirect || apiClient.getGitHubOAuthRedirect();
+
+          if (!clientId) {
+            console.log(chalk.red('GitHub OAuth client ID is required for login.'));
+            console.log(chalk.gray('Use --github-client-id <id> to provide it.'));
+            return;
+          }
+
+          if (!redirectUrl) {
+            console.log(chalk.red('GitHub OAuth redirect URL is required for login.'));
+            console.log(chalk.gray('Use --github-redirect <url> to provide it.'));
+            return;
+          }
+
+          apiClient.setGitHubOAuthConfig(clientId, redirectUrl);
+          console.log(chalk.green('GitHub OAuth configuration updated.'));
+        }
+
         // Check if already logged in
         const isTokenValid = await apiClient.checkToken();
         if (isTokenValid) {
           const user = await apiClient.getUser();
           console.log(chalk.green(`You are already logged in as ${user.username}`));
+          return;
+        }
+
+        // Verify GitHub OAuth config
+        const clientId = apiClient.getGitHubClientId();
+        if (!clientId) {
+          console.log(chalk.red('GitHub OAuth client ID is not configured.'));
+          console.log(chalk.gray('Use --github-client-id <id> to provide it.'));
           return;
         }
 

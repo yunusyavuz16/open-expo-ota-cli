@@ -12,11 +12,17 @@ const CONFIG_FILE = path.join(CONFIG_PATH, 'config.json');
 interface Config {
   apiUrl: string;
   currentApp?: string;
+  defaultChannel?: string;
+  defaultRuntimeVersion?: string;
+  githubClientId?: string;
+  githubOauthRedirect?: string;
 }
 
 // Default config
 const DEFAULT_CONFIG: Config = {
   apiUrl: 'http://localhost:3000/api',
+  defaultChannel: 'development',
+  defaultRuntimeVersion: '1.0.0',
 };
 
 // Create config directory if it doesn't exist
@@ -98,6 +104,45 @@ class ApiClient {
   // Get current app
   getCurrentApp(): string | undefined {
     return this.config.currentApp;
+  }
+
+  // Get default channel
+  getDefaultChannel(): string {
+    return this.config.defaultChannel || 'development';
+  }
+
+  // Set default channel
+  setDefaultChannel(channel: string): void {
+    this.config.defaultChannel = channel;
+    saveConfig(this.config);
+  }
+
+  // Get default runtime version
+  getDefaultRuntimeVersion(): string {
+    return this.config.defaultRuntimeVersion || '1.0.0';
+  }
+
+  // Set default runtime version
+  setDefaultRuntimeVersion(version: string): void {
+    this.config.defaultRuntimeVersion = version;
+    saveConfig(this.config);
+  }
+
+  // Set GitHub OAuth config
+  setGitHubOAuthConfig(clientId: string, redirectUrl: string): void {
+    this.config.githubClientId = clientId;
+    this.config.githubOauthRedirect = redirectUrl;
+    saveConfig(this.config);
+  }
+
+  // Get GitHub OAuth client ID
+  getGitHubClientId(): string | undefined {
+    return this.config.githubClientId;
+  }
+
+  // Get GitHub OAuth redirect URL
+  getGitHubOAuthRedirect(): string | undefined {
+    return this.config.githubOauthRedirect;
   }
 
   // Login with GitHub

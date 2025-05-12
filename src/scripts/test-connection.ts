@@ -4,20 +4,18 @@
  */
 
 import axios from 'axios';
-import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
-
-// Load environment variables from .env file if exists
-dotenv.config();
+import os from 'os';
 
 // Config file paths
-const CONFIG_PATH = path.join(process.env.HOME || process.env.USERPROFILE || '.', '.openexpoota');
+const CONFIG_PATH = path.join(os.homedir(), '.openexpoota');
 const CONFIG_FILE = path.join(CONFIG_PATH, 'config.json');
+const TOKEN_PATH = path.join(CONFIG_PATH, 'token');
 
 // Default API URL
-const DEFAULT_API_URL = process.env.API_URL || 'http://localhost:3000/api';
+const DEFAULT_API_URL = 'http://localhost:3000/api';
 
 // Load config
 function loadConfig() {
@@ -32,10 +30,22 @@ function loadConfig() {
   return { apiUrl: DEFAULT_API_URL };
 }
 
+// Load token
+function loadToken() {
+  try {
+    if (fs.existsSync(TOKEN_PATH)) {
+      return fs.readFileSync(TOKEN_PATH, 'utf8');
+    }
+  } catch (error) {
+    console.log(chalk.yellow('Could not load token file.'));
+  }
+  return null;
+}
+
 async function testConnection() {
   const config = loadConfig();
   const apiUrl = config.apiUrl || DEFAULT_API_URL;
-  const token = config.token || process.env.AUTH_TOKEN;
+  const token = loadToken();
 
   console.log(chalk.cyan('OpenExpoOTA CLI - Connection Test'));
   console.log(chalk.cyan('---------------------------------'));
