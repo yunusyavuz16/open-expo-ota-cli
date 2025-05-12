@@ -241,29 +241,60 @@ class ApiClient {
   ): Promise<any> {
     const formData = new FormData();
 
-    // Add update data
-    formData.append('version', updateData.version);
-    formData.append('channel', updateData.channel);
-    formData.append('runtimeVersion', updateData.runtimeVersion);
-    updateData.platforms.forEach((platform) => {
-      formData.append('platforms', platform);
+    // Add update data as JSON to avoid field name conflicts
+    formData.append('data', JSON.stringify({
+      version: updateData.version,
+      channel: updateData.channel,
+      runtimeVersion: updateData.runtimeVersion,
+      platforms: updateData.platforms
+    }));
+
+    // Add bundle file with proper field name
+    formData.append('bundle', fs.createReadStream(bundlePath), {
+      filename: path.basename(bundlePath),
+      contentType: 'application/javascript'
     });
 
-    // Add bundle file
-    formData.append('bundle', fs.createReadStream(bundlePath));
-
-    // Add assets
+    // Add assets with proper field name
     assetPaths.forEach((assetPath) => {
-      formData.append('assets', fs.createReadStream(assetPath));
+      // Determine content type based on extension
+      const ext = path.extname(assetPath).toLowerCase();
+      let contentType = 'application/octet-stream'; // Default content type
+
+      if (['.jpg', '.jpeg'].includes(ext)) contentType = 'image/jpeg';
+      else if (ext === '.png') contentType = 'image/png';
+      else if (ext === '.gif') contentType = 'image/gif';
+      else if (ext === '.svg') contentType = 'image/svg+xml';
+      else if (['.ttf', '.otf'].includes(ext)) contentType = 'font/ttf';
+      else if (['.woff', '.woff2'].includes(ext)) contentType = 'font/woff';
+
+      formData.append('assets', fs.createReadStream(assetPath), {
+        filename: path.basename(assetPath),
+        contentType
+      });
     });
 
-    const response = await this.client.post(`/apps/${appId}/updates`, formData, {
-      headers: {
-        ...formData.getHeaders(),
-      },
-    });
+    try {
+      const response = await this.client.post(`/apps/${appId}/updates`, formData, {
+        headers: {
+          ...formData.getHeaders(),
+        },
+        maxBodyLength: Infinity, // Allow large file uploads
+        maxContentLength: Infinity,
+      });
 
-    return response.data;
+      return response.data;
+    } catch (error: any) {
+      // Enhanced error handling
+      if (error.response) {
+        console.error('Server responded with error:', error.response.status, error.response.data);
+      } else if (error.request) {
+        console.error('No response received from server');
+      } else {
+        console.error('Error setting up request:', error.message);
+      }
+      throw error;
+    }
   }
 }
 
