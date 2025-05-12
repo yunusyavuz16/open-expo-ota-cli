@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import FormData from 'form-data';
 import os from 'os';
+import archiver from 'archiver';
 
 // Config file path
 const CONFIG_PATH = path.join(os.homedir(), '.openexpoota');
@@ -239,53 +240,99 @@ class ApiClient {
     bundlePath: string,
     assetPaths: string[] = []
   ): Promise<any> {
-    const formData = new FormData();
-
-    // Add update data as JSON to avoid field name conflicts
-    formData.append('data', JSON.stringify({
-      version: updateData.version,
-      channel: updateData.channel,
-      runtimeVersion: updateData.runtimeVersion,
-      platforms: updateData.platforms
-    }));
-
-    // Add bundle file with proper field name
-    formData.append('bundle', fs.createReadStream(bundlePath), {
-      filename: path.basename(bundlePath),
-      contentType: 'application/javascript'
-    });
-
-    // Add assets with proper field name
-    assetPaths.forEach((assetPath) => {
-      // Determine content type based on extension
-      const ext = path.extname(assetPath).toLowerCase();
-      let contentType = 'application/octet-stream'; // Default content type
-
-      if (['.jpg', '.jpeg'].includes(ext)) contentType = 'image/jpeg';
-      else if (ext === '.png') contentType = 'image/png';
-      else if (ext === '.gif') contentType = 'image/gif';
-      else if (ext === '.svg') contentType = 'image/svg+xml';
-      else if (['.ttf', '.otf'].includes(ext)) contentType = 'font/ttf';
-      else if (['.woff', '.woff2'].includes(ext)) contentType = 'font/woff';
-
-      formData.append('assets', fs.createReadStream(assetPath), {
-        filename: path.basename(assetPath),
-        contentType
-      });
-    });
-
     try {
+      // Create a zip file containing bundle and assets
+      console.log('Creating update package...');
+      const tempDir = os.tmpdir();
+      const zipPath = path.join(tempDir, `update-${Date.now()}.zip`);
+
+      // Use a simpler archive creation approach
+      await new Promise<void>((resolve, reject) => {
+        const output = fs.createWriteStream(zipPath);
+        const archive = archiver('zip', { zlib: { level: 9 } });
+
+        output.on('close', () => {
+          console.log(`Update package created: ${zipPath} (${Math.round(archive.pointer() / 1024)} KB)`);
+          resolve();
+        });
+
+        archive.on('error', (err) => {
+          reject(err);
+        });
+
+        archive.pipe(output);
+
+        // Add the bundle file
+        archive.file(bundlePath, { name: 'bundle.js' });
+
+        // Add assets
+        for (const assetPath of assetPaths) {
+          const assetName = path.basename(assetPath);
+          archive.file(assetPath, { name: `assets/${assetName}` });
+        }
+
+        // Add metadata.json
+        const metadata = {
+          version: updateData.version,
+          channel: updateData.channel,
+          runtimeVersion: updateData.runtimeVersion,
+          platforms: updateData.platforms
+        };
+
+        archive.append(JSON.stringify(metadata, null, 2), { name: 'metadata.json' });
+
+        // Finalize
+        archive.finalize();
+      });
+
+      // Verify the ZIP file
+      if (!fs.existsSync(zipPath)) {
+        throw new Error('Failed to create zip file');
+      }
+
+      const stats = fs.statSync(zipPath);
+      console.log(`Zip file size: ${stats.size} bytes`);
+
+      if (stats.size === 0) {
+        throw new Error('Created ZIP file is empty');
+      }
+
+      // Create form data
+      const formData = new FormData();
+
+      // Add basic metadata (these will be duplicated in the zip file)
+      formData.append('version', updateData.version);
+      formData.append('channel', updateData.channel);
+      formData.append('runtimeVersion', updateData.runtimeVersion);
+      formData.append('platforms', JSON.stringify(updateData.platforms));
+
+      // Add the zip file
+      formData.append('updatePackage', fs.createReadStream(zipPath), {
+        filename: path.basename(zipPath),
+        contentType: 'application/zip'
+      });
+
+      // Log what we're sending
+      console.log(`Uploading to ${this.client.defaults.baseURL}/apps/${appId}/updates`);
+
+      // Send the request
       const response = await this.client.post(`/apps/${appId}/updates`, formData, {
         headers: {
-          ...formData.getHeaders(),
+          ...formData.getHeaders()
         },
-        maxBodyLength: Infinity, // Allow large file uploads
-        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity
       });
+
+      // Clean up temp file
+      try {
+        fs.unlinkSync(zipPath);
+      } catch (err) {
+        console.warn('Warning: Failed to clean up temporary zip file:', err);
+      }
 
       return response.data;
     } catch (error: any) {
-      // Enhanced error handling
       if (error.response) {
         console.error('Server responded with error:', error.response.status, error.response.data);
       } else if (error.request) {
