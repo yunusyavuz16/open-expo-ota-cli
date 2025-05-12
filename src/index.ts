@@ -14,6 +14,9 @@ import listUpdates from './commands/list-updates';
 import promoteUpdate from './commands/promote-update';
 import inviteUser from './commands/invite-user';
 
+// Get version from package.json
+const packageJson = require('../package.json');
+
 // Create CLI program
 const program = new Command();
 
@@ -21,7 +24,7 @@ const program = new Command();
 program
   .name('ota')
   .description('CLI tool for OpenExpoOTA - A self-hosted OTA update system for Expo')
-  .version('1.0.0');
+  .version(packageJson.version);
 
 // Register commands
 login(program);

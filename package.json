@@ -4,6 +4,7 @@
   "description": "Command-line tool for OpenExpoOTA - A self-hosted OTA update system for Expo",
   "main": "dist/index.js",
   "bin": {
+    "openexpoota": "dist/index.js",
     "ota": "dist/index.js"
   },
   "scripts": {
@@ -43,5 +44,20 @@
     "@types/node": "^20.4.2",
     "ts-node": "^10.9.1",
     "typescript": "^5.1.6"
-  }
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/openexpoota.git",
+    "directory": "cli"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/openexpoota/issues"
+  },
+  "homepage": "https://github.com/yourusername/openexpoota#readme"
 }

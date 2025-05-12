@@ -22,6 +22,13 @@ Or use it directly with npx:
 npx openexpoota-cli [command]
 ```
 
+After installation, you can use either of these commands:
+
+```bash
+openexpoota [command]
+ota [command]
+```
+
 ## Configuration
 
 All configuration is handled through command-line parameters and stored in a local configuration file at `~/.openexpoota/config.json`. You don't need to edit this file directly as the CLI manages it for you.

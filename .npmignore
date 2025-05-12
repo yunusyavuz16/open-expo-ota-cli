@@ -1,0 +1,25 @@
+# Source files (compiled code is in dist/)
+src/
+
+# Development files
+node_modules/
+.git/
+.github/
+.vscode/
+.idea/
+*.log
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+jest.config.js
+
+# Config files that shouldn't be published
+tsconfig.json
+.eslintrc.js
+.prettierrc
+.editorconfig
+
+# Local development files
+ota.config.json
+
