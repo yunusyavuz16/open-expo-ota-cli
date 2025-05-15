@@ -249,6 +249,7 @@ class ApiClient {
       channel: string;
       runtimeVersion: string;
       platforms: string[];
+      targetVersionRange?: string;
     },
     bundlePath: string,
     assetPaths: string[] = []
@@ -322,28 +323,25 @@ class ApiClient {
       console.log(`Uploading to ${this.client.defaults.baseURL}/apps/${appId}/updates`);
 
       // Create form data
-      const form = new FormData();
-      form.append('version', updateData.version);
-      form.append('channel', updateData.channel);
-      form.append('runtimeVersion', updateData.runtimeVersion);
-
-      // Ensure platforms is properly formatted as a string array
-      const platformsArray = Array.isArray(updateData.platforms)
-        ? updateData.platforms
-        : [updateData.platforms].filter(Boolean);
-
-      form.append('platforms', JSON.stringify(platformsArray));
+      const formData = new FormData();
+      formData.append('version', updateData.version);
+      formData.append('channel', updateData.channel);
+      formData.append('runtimeVersion', updateData.runtimeVersion);
+      formData.append('platforms', JSON.stringify(updateData.platforms));
+      if (updateData.targetVersionRange) {
+        formData.append('targetVersionRange', updateData.targetVersionRange);
+      }
 
       // Add the bundle file
-      form.append('bundle', fs.createReadStream(zipPath), {
+      formData.append('bundle', fs.createReadStream(zipPath), {
         filename: path.basename(zipPath),
         contentType: 'application/zip'
       });
 
       // Try using a custom axios configuration with minimal transformations
-      const response = await this.client.post(`/apps/${appId}/updates`, form, {
+      const response = await this.client.post(`/apps/${appId}/updates`, formData, {
         headers: {
-          ...form.getHeaders()
+          ...formData.getHeaders()
         },
         maxBodyLength: Infinity,
         maxContentLength: Infinity,

@@ -37,11 +37,13 @@
     "glob": "^8.1.0",
     "inquirer": "^8.2.5",
     "open": "^8.4.2",
-    "ora": "^5.4.1"
+    "ora": "^5.4.1",
+    "semver": "^7.7.2"
   },
   "devDependencies": {
     "@types/inquirer": "^9.0.3",
     "@types/node": "^20.4.2",
+    "@types/semver": "^7.7.0",
     "ts-node": "^10.9.1",
     "typescript": "^5.1.6"
   },

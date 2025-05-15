@@ -7,6 +7,7 @@ import os from 'os';
 import apiClient from '../utils/api-client';
 import { getExpoConfig, createBundle } from '../utils/bundle';
 import { ReleaseChannel, Platform } from '../types';
+import semver from 'semver';
 
 export default function publish(program: Command): void {
   program
@@ -17,6 +18,7 @@ export default function publish(program: Command): void {
     .option('-v, --version <version>', 'Version of the update (defaults to app.json version)')
     .option('-r, --runtime-version <runtimeVersion>', 'Runtime version (defaults to app.json version)')
     .option('-p, --platform <platform>', 'Platform(s) to target (comma-separated: ios,android,web)')
+    .option('-tvr, --target-version-range <range>', 'Semantic versioning range for targeted app versions')
     .action(async (options) => {
       try {
         // Verify user is logged in
@@ -60,6 +62,13 @@ export default function publish(program: Command): void {
         // Determine version and runtime version
         const version = options.version || expoConfig.version || '1.0.0';
         const runtimeVersion = options.runtimeVersion || expoConfig.runtimeVersion || expoConfig.version || apiClient.getDefaultRuntimeVersion();
+        const targetVersionRange = options.targetVersionRange;
+
+        // Validate targetVersionRange if provided
+        if (targetVersionRange && !semver.validRange(targetVersionRange)) {
+          console.log(chalk.red(`Invalid target version range: ${targetVersionRange}. Please provide a valid semver range.`));
+          return;
+        }
 
         // Determine channel
         let channel: ReleaseChannel = ReleaseChannel.DEVELOPMENT;
@@ -91,6 +100,9 @@ export default function publish(program: Command): void {
         console.log(chalk.gray('Update details:'));
         console.log(chalk.gray(`- Version: ${version}`));
         console.log(chalk.gray(`- Runtime Version: ${runtimeVersion}`));
+        if (targetVersionRange) {
+          console.log(chalk.gray(`- Target Version Range: ${targetVersionRange}`));
+        }
         console.log(chalk.gray(`- Channel: ${channel}`));
         console.log(chalk.gray(`- Platforms: ${platforms.join(', ')}`));
 
@@ -130,6 +142,7 @@ export default function publish(program: Command): void {
               channel,
               runtimeVersion,
               platforms,
+              targetVersionRange,
             },
             bundlePath,
             assetPaths
