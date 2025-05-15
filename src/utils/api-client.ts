@@ -256,8 +256,16 @@ class ApiClient {
           resolve();
         });
 
+        output.on('error', (err) => {
+          reject(err);
+        });
+
         archive.on('error', (err) => {
           reject(err);
+        });
+
+        archive.on('warning', (err) => {
+          console.warn('Warning during archive creation:', err);
         });
 
         archive.pipe(output);
@@ -297,32 +305,39 @@ class ApiClient {
         throw new Error('Created ZIP file is empty');
       }
 
+      // Use a simpler approach to send the file - form-data without axios transformations
+      console.log(`Uploading to ${this.client.defaults.baseURL}/apps/${appId}/updates`);
+
       // Create form data
-      const formData = new FormData();
+      const form = new FormData();
+      form.append('version', updateData.version);
+      form.append('channel', updateData.channel);
+      form.append('runtimeVersion', updateData.runtimeVersion);
 
-      // Add basic metadata (these will be duplicated in the zip file)
-      formData.append('version', updateData.version);
-      formData.append('channel', updateData.channel);
-      formData.append('runtimeVersion', updateData.runtimeVersion);
-      formData.append('platforms', JSON.stringify(updateData.platforms));
+      // Ensure platforms is properly formatted as a string array
+      const platformsArray = Array.isArray(updateData.platforms)
+        ? updateData.platforms
+        : [updateData.platforms].filter(Boolean);
 
-      // Add the zip file
-      formData.append('updatePackage', fs.createReadStream(zipPath), {
+      form.append('platforms', JSON.stringify(platformsArray));
+
+      // Add the bundle file
+      form.append('bundle', fs.createReadStream(zipPath), {
         filename: path.basename(zipPath),
         contentType: 'application/zip'
       });
 
-      // Log what we're sending
-      console.log(`Uploading to ${this.client.defaults.baseURL}/apps/${appId}/updates`);
-
-      // Send the request
-      const response = await this.client.post(`/apps/${appId}/updates`, formData, {
+      // Try using a custom axios configuration with minimal transformations
+      const response = await this.client.post(`/apps/${appId}/updates`, form, {
         headers: {
-          ...formData.getHeaders()
+          ...form.getHeaders()
         },
         maxBodyLength: Infinity,
-        maxContentLength: Infinity
+        maxContentLength: Infinity,
+        timeout: 300000, // 5 minute timeout
       });
+
+      console.log('Response received:', response.status);
 
       // Clean up temp file
       try {
@@ -331,6 +346,7 @@ class ApiClient {
         console.warn('Warning: Failed to clean up temporary zip file:', err);
       }
 
+      // Return the data
       return response.data;
     } catch (error: any) {
       if (error.response) {
