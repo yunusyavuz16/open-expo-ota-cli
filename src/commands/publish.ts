@@ -123,7 +123,7 @@ export default function publish(program: Command): void {
         // Publish update
         console.log(chalk.blue('Uploading to server...'));
         try {
-          const update = await apiClient.publishUpdate(
+          const response = await apiClient.publishUpdate(
             app.id,
             {
               version,
@@ -134,6 +134,9 @@ export default function publish(program: Command): void {
             bundlePath,
             assetPaths
           );
+
+          // Extract update from response - could be nested in an update property
+          const update = response.update || response;
 
           console.log(chalk.green('Update published successfully!'));
           console.log(chalk.gray(`Update ID: ${update.id}`));

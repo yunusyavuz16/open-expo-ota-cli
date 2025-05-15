@@ -13,12 +13,48 @@ export default function login(program: Command): void {
     .option('-u, --url <url>', 'API URL to use (e.g. http://localhost:3000/api)')
     .option('--github-client-id <id>', 'GitHub OAuth client ID')
     .option('--github-redirect <url>', 'GitHub OAuth redirect URL')
+    .option('--test', 'Use test login for development')
     .action(async (options) => {
       try {
         // If API URL is provided, set it
         if (options.url) {
           apiClient.setApiUrl(options.url);
           console.log(chalk.green(`API URL set to ${options.url}`));
+        }
+
+        // Check if already logged in
+        try {
+          const isTokenValid = await apiClient.checkToken();
+          if (isTokenValid) {
+            const user = await apiClient.getUser();
+            console.log(chalk.green(`You are already logged in as ${user.username}`));
+            return;
+          }
+        } catch (error) {
+          console.error(`Error checking token validity: ${error}`);
+        }
+
+        // Special test mode for development
+        if (options.test) {
+          try {
+            console.log(chalk.blue('Using test login mode for development...'));
+
+            // Get test token from the test-login endpoint
+            const token = await apiClient.testLogin();
+
+            // Store the token
+            apiClient.setToken(token);
+            console.log(chalk.green('Successfully logged in with test account.'));
+            console.log(chalk.gray('Username: test-user'));
+            console.log(chalk.gray('Role: admin'));
+            return;
+          } catch (error: any) {
+            console.error(chalk.red('Test login failed:'), error.message || String(error));
+            if (error.response) {
+              console.error(chalk.red('Server response:'), error.response.data);
+            }
+            process.exit(1);
+          }
         }
 
         // If GitHub OAuth config is provided, set it
@@ -40,14 +76,6 @@ export default function login(program: Command): void {
 
           apiClient.setGitHubOAuthConfig(clientId, redirectUrl);
           console.log(chalk.green('GitHub OAuth configuration updated.'));
-        }
-
-        // Check if already logged in
-        const isTokenValid = await apiClient.checkToken();
-        if (isTokenValid) {
-          const user = await apiClient.getUser();
-          console.log(chalk.green(`You are already logged in as ${user.username}`));
-          return;
         }
 
         // Verify GitHub OAuth config

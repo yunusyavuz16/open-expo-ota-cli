@@ -151,6 +151,19 @@ class ApiClient {
     return `${this.config.apiUrl}/auth/github`;
   }
 
+  // Test login for development
+  async testLogin(): Promise<string> {
+    try {
+      const response = await this.client.get('/auth/test-login');
+      if (response.data && response.data.token) {
+        return response.data.token;
+      }
+      throw new Error('Invalid response from test login endpoint');
+    } catch (error) {
+      throw error;
+    }
+  }
+
   // Set token
   setToken(token: string): void {
     this.client.defaults.headers.common.Authorization = `Bearer ${token}`;
@@ -338,6 +351,12 @@ class ApiClient {
       });
 
       console.log('Response received:', response.status);
+
+      // Debug response data structure
+      console.log('Response data structure:', Object.keys(response.data).join(', '));
+      if (response.data.update) {
+        console.log('Update ID in response:', response.data.update.id);
+      }
 
       // Clean up temp file
       try {
