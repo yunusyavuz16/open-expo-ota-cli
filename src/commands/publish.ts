@@ -15,10 +15,11 @@ export default function publish(program: Command): void {
     .description('Publish an update to your OpenExpoOTA server')
     .option('-d, --dir <directory>', 'Project directory (defaults to current directory)')
     .option('-c, --channel <channel>', 'Release channel (production, staging, development)')
-    .option('-v, --version <version>', 'Version of the update (defaults to app.json version)')
+    .option('--version <version>', 'Version of the update (defaults to app.json version)')
     .option('-r, --runtime-version <runtimeVersion>', 'Runtime version (defaults to app.json version)')
     .option('-p, --platform <platform>', 'Platform(s) to target (comma-separated: ios,android,web)')
-    .option('-tvr, --target-version-range <range>', 'Semantic versioning range for targeted app versions')
+    .option('-tv, --target-version <range>', 'Target app binary versions (semver range, e.g., ">=1.0.0", "1.2.x", "^2.0.0")')
+    .option('-tvr, --target-version-range <range>', 'Alias for --target-version (deprecated)')
     .action(async (options) => {
       try {
         // Verify user is logged in
@@ -62,11 +63,12 @@ export default function publish(program: Command): void {
         // Determine version and runtime version
         const version = options.version || expoConfig.version || '1.0.0';
         const runtimeVersion = options.runtimeVersion || expoConfig.runtimeVersion || expoConfig.version || apiClient.getDefaultRuntimeVersion();
-        const targetVersionRange = options.targetVersionRange;
+        const targetVersionRange = options.targetVersion || options.targetVersionRange; // --target-version takes precedence
 
         // Validate targetVersionRange if provided
         if (targetVersionRange && !semver.validRange(targetVersionRange)) {
           console.log(chalk.red(`Invalid target version range: ${targetVersionRange}. Please provide a valid semver range.`));
+          console.log(chalk.gray('Examples: ">=1.0.0", "1.2.x", "^2.0.0", "1.0.0 - 2.0.0"'));
           return;
         }
 
@@ -101,7 +103,7 @@ export default function publish(program: Command): void {
         console.log(chalk.gray(`- Version: ${version}`));
         console.log(chalk.gray(`- Runtime Version: ${runtimeVersion}`));
         if (targetVersionRange) {
-          console.log(chalk.gray(`- Target Version Range: ${targetVersionRange}`));
+          console.log(chalk.gray(`- Target Version: ${targetVersionRange}`));
         }
         console.log(chalk.gray(`- Channel: ${channel}`));
         console.log(chalk.gray(`- Platforms: ${platforms.join(', ')}`));
