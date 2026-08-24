@@ -317,8 +317,8 @@ To develop the CLI locally:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/openexpoota.git
-cd openexpoota/cli
+git clone https://github.com/yunusyavuz16/open-expo-ota-cli.git
+cd open-expo-ota-cli
 
 # Install dependencies
 npm install
