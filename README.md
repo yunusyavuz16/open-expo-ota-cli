@@ -2,6 +2,14 @@
 
 Command-line tool for managing OTA updates with the OpenExpoOTA self-hosted platform.
 
+## Project components
+
+Part of [OpenExpoOTA](https://github.com/yunusyavuz16/open-expo-ota-backend), a self-hosted alternative to EAS Update:
+
+- **[open-expo-ota-backend](https://github.com/yunusyavuz16/open-expo-ota-backend)** — the update server: manifests, storage, auth
+- **[open-expo-ota-cli](https://github.com/yunusyavuz16/open-expo-ota-cli)** — publish updates from your machine or CI *(this repo)*
+- **[open-expo-ota-client](https://github.com/yunusyavuz16/open-expo-ota-client)** — the Expo library your app installs to fetch updates
+
 ## Features
 
 - GitHub OAuth and test-based authentication
