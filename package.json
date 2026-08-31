@@ -1,6 +1,6 @@
 {
   "name": "openexpoota-cli",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "Command-line tool for OpenExpoOTA - A self-hosted OTA update system for Expo",
   "main": "dist/index.js",
   "bin": {
@@ -21,9 +21,15 @@
     "ota",
     "updates",
     "cli",
-    "react-native"
+    "react-native",
+    "ota-updates",
+    "expo-updates",
+    "eas-update",
+    "eas",
+    "self-hosted",
+    "codepush-alternative"
   ],
-  "author": "",
+  "author": "Yunus Yavuz <developer.yunus.yavuz@gmail.com> (https://dayloflow.com)",
   "license": "MIT",
   "dependencies": {
     "@types/archiver": "^6.0.3",
@@ -57,11 +63,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/openexpoota.git",
-    "directory": "cli"
+    "url": "git+https://github.com/yunusyavuz16/open-expo-ota-cli.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/openexpoota/issues"
+    "url": "https://github.com/yunusyavuz16/open-expo-ota-cli/issues"
   },
-  "homepage": "https://github.com/yourusername/openexpoota#readme"
+  "homepage": "https://dayloflow.com"
 }
