@@ -1,53 +1,9 @@
 import fs from 'fs-extra';
 import path from 'path';
-import glob from 'glob';
-import archiver from 'archiver';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
 const execAsync = promisify(exec);
-
-// Helper function to safely run glob.sync with fallback
-const safeGlobSync = (pattern: string, options: glob.IOptions): string[] => {
-  try {
-    return glob.sync(pattern, options);
-  } catch (error) {
-    console.warn('Warning: Error using glob.sync, falling back to manual file search', error);
-
-    // Fallback implementation if glob.sync is not available
-    const results: string[] = [];
-    const baseDir = options.cwd || '.';
-
-    const walkSync = (dir: string, pattern: RegExp) => {
-      const files = fs.readdirSync(dir);
-
-      files.forEach(file => {
-        const filePath = path.join(dir, file);
-        const relativePath = path.relative(baseDir, filePath);
-        const stat = fs.statSync(filePath);
-
-        if (stat.isDirectory()) {
-          walkSync(filePath, pattern);
-        } else if (pattern.test(file)) {
-          results.push(relativePath);
-        }
-      });
-    };
-
-    // Convert glob pattern to regex
-    const patternRegex = new RegExp(pattern
-      .replace(/\./g, '\\.')
-      .replace(/\*\*/g, '.*')
-      .replace(/\*/g, '[^/]*')
-      .replace(/\{([^}]+)\}/g, (_, group) =>
-        `(${group.split(',').map((p: string) => p.trim()).join('|')})`
-      )
-    );
-
-    walkSync(baseDir, patternRegex);
-    return results;
-  }
-};
 
 // Helper function to check if path exists
 const pathExists = async (filePath: string): Promise<boolean> => {
@@ -107,6 +63,7 @@ export const getExpoConfig = async (projectRoot: string): Promise<any> => {
 export const createBundle = async (
   projectRoot: string,
   outputDir: string,
+  platform: string,
 ): Promise<{ bundlePath: string; assetPaths: string[] }> => {
   try {
     // Ensure output directory exists
@@ -119,7 +76,7 @@ export const createBundle = async (
     // Run expo export to get the bundle and assets
     console.log('Running expo export...');
     try {
-      const result = await execAsync('npx expo export', {
+      const result = await execAsync(`npx expo export --platform ${platform} --clear`, {
         cwd: projectRoot // This is the root of the Expo project
       });
       console.log('Export successful:', result.stdout);
@@ -139,28 +96,39 @@ export const createBundle = async (
     const bundleFileName = 'bundle.js';
     const bundlePath = path.join(outputDir, bundleFileName);
 
-    // Find main JS bundle using our safe function
-    const bundleFiles = safeGlobSync('**/*.js', { cwd: distDir });
-    if (bundleFiles.length === 0) {
-      throw new Error('No JS bundle found in export output');
+    const metadataPath = path.join(distDir, 'metadata.json');
+    if (!await pathExists(metadataPath)) {
+      throw new Error('Expo export did not generate metadata.json');
+    }
+    const exportMetadata = await fs.readJson(metadataPath);
+    const platformMetadata = exportMetadata.fileMetadata?.[platform];
+    if (!platformMetadata?.bundle) {
+      throw new Error(`Expo export metadata does not contain a ${platform} bundle`);
+    }
+
+    const exportedBundlePath = path.join(distDir, platformMetadata.bundle);
+    if (!await pathExists(exportedBundlePath)) {
+      throw new Error(`Exported ${platform} bundle does not exist: ${platformMetadata.bundle}`);
     }
 
     // Copy the main bundle file
-    await fs.copy(
-      path.join(distDir, bundleFiles[0]),
-      bundlePath,
-    );
+    await fs.copy(exportedBundlePath, bundlePath);
 
-    // Find and copy asset files using our safe function
-    const assetFiles = safeGlobSync('**/*.{png,jpg,jpeg,gif,svg,ttf,otf,woff,woff2}', { cwd: distDir });
+    // Native Expo export assets are extensionless on disk. metadata.json is
+    // authoritative for both the platform asset set and each file extension.
     const assetPaths: string[] = [];
+    const copiedAssets = new Set<string>();
 
-    for (const assetFile of assetFiles) {
-      const assetPath = path.join(outputDir, path.basename(assetFile));
-      await fs.copy(
-        path.join(distDir, assetFile),
-        assetPath,
+    for (const asset of platformMetadata.assets || []) {
+      if (!asset.path || copiedAssets.has(asset.path)) continue;
+      copiedAssets.add(asset.path);
+
+      const extension = asset.ext ? `.${asset.ext}` : '';
+      const assetPath = path.join(
+        outputDir,
+        `${path.basename(asset.path)}${extension}`
       );
+      await fs.copy(path.join(distDir, asset.path), assetPath);
       assetPaths.push(assetPath);
     }
 

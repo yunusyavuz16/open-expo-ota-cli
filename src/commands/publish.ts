@@ -15,7 +15,7 @@ export default function publish(program: Command): void {
     .description('Publish an update to your OpenExpoOTA server')
     .option('-d, --dir <directory>', 'Project directory (defaults to current directory)')
     .option('-c, --channel <channel>', 'Release channel (production, staging, development)')
-    .option('--version <version>', 'Version of the update (defaults to app.json version)')
+    .option('--update-version <version>', 'Version of the update (defaults to app.json version)')
     .option('-r, --runtime-version <runtimeVersion>', 'Runtime version (defaults to app.json version)')
     .option('-p, --platform <platform>', 'Platform(s) to target (comma-separated: ios,android,web)')
     .option('-tv, --target-version <range>', 'Target app binary versions (semver range, e.g., ">=1.0.0", "1.2.x", "^2.0.0")')
@@ -61,7 +61,7 @@ export default function publish(program: Command): void {
         const expoConfig = await getExpoConfig(projectDir);
 
         // Determine version and runtime version
-        const version = options.version || expoConfig.version || '1.0.0';
+        const version = options.updateVersion || expoConfig.version || '1.0.0';
         const runtimeVersion = options.runtimeVersion || expoConfig.runtimeVersion || expoConfig.version || apiClient.getDefaultRuntimeVersion();
         const targetVersionRange = options.targetVersion || options.targetVersionRange; // --target-version takes precedence
 
@@ -98,6 +98,13 @@ export default function publish(program: Command): void {
           }
         }
 
+        if (platforms.length !== 1) {
+          console.log(chalk.red(
+            'The current backend stores one launch bundle per update. Specify exactly one platform with --platform.'
+          ));
+          process.exit(1);
+        }
+
         // Confirm with user
         console.log(chalk.gray('Update details:'));
         console.log(chalk.gray(`- Version: ${version}`));
@@ -129,7 +136,7 @@ export default function publish(program: Command): void {
         console.log(chalk.blue('Creating bundle...'));
 
         // Create bundle
-        const { bundlePath, assetPaths } = await createBundle(projectDir, tempDir);
+        const { bundlePath, assetPaths } = await createBundle(projectDir, tempDir, platforms[0]);
 
         console.log(chalk.gray(`Bundle created at: ${bundlePath}`));
         console.log(chalk.gray(`Assets: ${assetPaths.length} files`));
